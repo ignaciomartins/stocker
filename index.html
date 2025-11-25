@@ -1,286 +1,319 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gestor de Stock - Dinámico</title>
+  <title>Gestor de Stock</title>
+  <!-- Evita el zoom cuando el usuario escribe en inputs en móviles -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <style>
-    :root{--bg:#f8f9fb;--card:#ffffff;--muted:#666;--accent:#2b6cb0}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:#111}
-    .app{max-width:1024px;margin:0 auto;padding:14px}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    h1{font-size:18px;margin:0}
+    :root{--bg:#f7f8fb;--card:#fff;--muted:#666;--accent:#2b6cb0}
+    *{box-sizing:border-box}
+    body{font-family:Inter, Arial, sans-serif;background:var(--bg);margin:0;padding:14px;color:#111}
+    h2{margin:0 0 12px 0;font-size:18px}
 
-    /* layout */
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    button.icon{background:#222;color:#fff;border:none;padding:8px 10px;border-radius:8px;font-weight:600}
-    button.ghost{background:transparent;border:1px solid #ddd;padding:8px 10px;border-radius:8px}
-
-    /* categories */
-    .category{background:var(--card);padding:12px;border-radius:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-    .cat-head{display:flex;align-items:center;justify-content:space-between}
+    .cat-box{background:var(--card);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .cat-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
     .cat-title{font-weight:700}
-    .cat-actions{display:flex;gap:8px;align-items:center}
-    .cat-body{margin-top:10px}
+    .cat-sub{font-size:13px;color:var(--muted)}
 
-    .model{padding:6px 6px 6px 8px;border-radius:8px;margin-bottom:6px}
-    .model-name{font-weight:600}
+    .cat-actions{display:flex;gap:8px;align-items:center}
+    .link-btn{background:transparent;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:6px;border-radius:6px}
+    .icon-btn{background:#111;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer}
+
+    .cat-body{margin-top:10px}
+    .model{padding:6px 6px 6px 8px;border-radius:8px;margin-bottom:8px}
+    .model-name{font-weight:600;padding-left:8px} /* requested padding-left */
     .variants{padding-left:8px;margin-top:6px}
     .variant{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px}
-    .variant-left{display:flex;align-items:center;gap:8px}
-    .qty{min-width:34px;text-align:center;padding:4px 8px;border-radius:6px;background:#eef2ff}
+    .variant-left{display:flex;flex-direction:column;gap:6px}
+    .qty{min-width:40px;text-align:center;padding:4px 8px;border-radius:6px;background:#eef2ff}
+
+    input[type="text"], textarea{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e6e6e6;width:100%}
+    textarea.import-box{min-height:90px;margin-top:8px}
 
     .small{font-size:13px;color:var(--muted)}
+    .caret{font-size:18px;padding:6px 8px;border-radius:6px;background:transparent;border:none;cursor:pointer}
 
-    .row-actions{display:flex;gap:6px}
-
-    input[type="text"], textarea{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e6e6e6}
-    textarea{min-height:80px}
-
-    .import-box{margin-top:8px}
-
-    /* responsive mobile friendly */
     @media (max-width:600px){
-      .app{padding:10px}
-      .cat-head{gap:8px}
-      button.icon{padding:8px}
-      .variant{flex-direction:column;align-items:flex-start;gap:6px}
+      body{padding:10px}
+      .variant{flex-direction:column;align-items:flex-start;gap:8px}
       .variant .qty{align-self:flex-end}
     }
 
-    /* accordion caret */
-    .caret{font-size:18px;padding:6px 8px;border-radius:6px}
-
     /* toast */
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none}
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .18s}
     .toast.show{opacity:1;pointer-events:auto}
-
-    /* small link style */
-    .linkish{background:transparent;border:none;color:var(--accent);font-weight:600;cursor:pointer}
   </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>Gestor de Stock — Móvil</h1>
-      <div class="controls">
-        <button class="icon" id="addCatBtn">+  Categoria</button>
-        <button class="ghost" id="exportAll">Exportar todo</button>
-      </div>
-    </header>
+  <h2>Gestor de Stock — Móvil</h2>
 
-    <main id="cats"></main>
-
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="ghost" id="clearAll">Limpiar todo</button>
-      <button class="ghost" id="loadExample">Cargar ejemplo</button>
-    </div>
-
-    <div id="toast" class="toast"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <button id="addCat" class="icon-btn">+ Categoria</button>
+    <button id="exportAll" class="link-btn">Exportar todo</button>
+    <button id="loadExample" class="link-btn">Cargar ejemplo</button>
+    <button id="clearAll" class="link-btn">Limpiar todo</button>
   </div>
 
-  <script>
-  // Key for localStorage
-  const STORAGE_KEY = 'stock_page_v1';
+  <main id="container"></main>
 
-  // Utility helpers
-  const $ = sel => document.querySelector(sel);
+  <div id="toast" class="toast"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+
+  const STORAGE_KEY = 'stock_page_v1';
+  const $ = s => document.querySelector(s);
   const uid = () => Math.random().toString(36).slice(2,9);
 
-  // Default data sample
-  const sampleData = [
-    {id:uid(),name:'Caja Marron',collapsed:false,models:[
-      {id:uid(),name:'14 Pro Max 512gb',variants:[{id:uid(),name:'Purple',qty:1}]},
-      {id:uid(),name:'14 Pro Max 1TB',variants:[{id:uid(),name:'Purple',qty:2}]}
+  // sample
+  const sample = [
+    { id: uid(), name: 'Caja Marron', collapsed: false, models: [
+      { id: uid(), name: '14 Pro Max 512gb', variants: [ { id: uid(), name: 'Purple', qty: 1 } ] },
+      { id: uid(), name: '14 Pro Max 1TB', variants: [ { id: uid(), name: 'Purple', qty: 2 } ] },
+      { id: uid(), name: 'AirPods', variants: [ { id: uid(), name: 'Pro', qty: 2 }, { id: uid(), name: 'Pro 3', qty: 25 }, { id: uid(), name: 'Max', qty: 7 } ] }
     ]},
-    {id:uid(),name:'Asis',collapsed:false,models:[
-      {id:uid(),name:'16 Pro 128gb',variants:[{id:uid(),name:'White',qty:2},{id:uid(),name:'Black',qty:3}]},
-      {id:uid(),name:'14 Pro Max 1TB',variants:[{id:uid(),name:'Purple',qty:1}]}
+    { id: uid(), name: 'Asis', collapsed: false, models: [
+      { id: uid(), name: '16 Pro 128gb', variants: [ { id: uid(), name: 'White', qty: 2 }, { id: uid(), name: 'Black', qty: 3 } ] }
     ]},
-    {id:uid(),name:'Tester',collapsed:false,models:[
-      {id:uid(),name:'13 128gb',variants:[{id:uid(),name:'Midnight',qty:2},{id:uid(),name:'Blue',qty:3}]},
-      {id:uid(),name:'16 128gb',variants:[{id:uid(),name:'Pink',qty:1}]}
+    { id: uid(), name: 'Tester', collapsed: false, models: [
+      { id: uid(), name: '13 128gb', variants: [ { id: uid(), name: 'Midnight', qty: 2 }, { id: uid(), name: 'Blue', qty: 3 } ] }
     ]}
   ];
 
-  // Load / Save
-  function save(data){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-  function load(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw?JSON.parse(raw):[] }catch(e){return []} }
+  function save(state){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null }catch(e){return null} }
 
-  // Current state
-  let state = load(); if(!state || state.length===0) state = sampleData;
+  let state = load() || sample.slice();
 
-  // Toast
-  function toast(msg, t=1500){ const el = $('#toast'); el.textContent = msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), t) }
+  const container = document.getElementById('container');
+  const toastEl = document.getElementById('toast');
 
-  // Render
-  const catsEl = $('#cats');
+  function toast(msg, t=1400){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), t); }
+
   function render(){
-    catsEl.innerHTML = '';
-    state.forEach(cat => {
-      const card = document.createElement('div'); card.className = 'category';
-
-      const head = document.createElement('div'); head.className = 'cat-head';
+    container.innerHTML = '';
+    state.forEach(cat=>{
+      const box = document.createElement('div'); box.className = 'cat-box';
+      // header
+      const header = document.createElement('div'); header.className = 'cat-header';
       const left = document.createElement('div');
-      const title = document.createElement('div'); title.className = 'cat-title'; title.textContent = cat.name;
-      const subtitle = document.createElement('div'); subtitle.className='small'; subtitle.textContent = cat.models.length + ' modelo(s)';
-      left.appendChild(title); left.appendChild(subtitle);
+      const title = document.createElement('div'); title.className = 'cat-title'; title.textContent = `(*_${cat.name}_*)`;
+      const sub = document.createElement('div'); sub.className = 'cat-sub'; sub.textContent = `${cat.models.length} modelo(s)`;
+      left.appendChild(title); left.appendChild(sub);
+      header.appendChild(left);
 
-      const actions = document.createElement('div'); actions.className='cat-actions';
-      const copyBtn = document.createElement('button'); copyBtn.className='linkish'; copyBtn.textContent='Copiar';
-      copyBtn.onclick = ()=>{ copyCategory(cat.id); };
+      const actions = document.createElement('div'); actions.className = 'cat-actions';
+      const copyBtn = document.createElement('button'); copyBtn.className='link-btn'; copyBtn.textContent = 'Copiar'; copyBtn.onclick = ()=> copyCategory(cat.id);
+      const importBtn = document.createElement('button'); importBtn.className='link-btn'; importBtn.textContent = 'Importar'; importBtn.onclick = ()=> toggleImport(cat.id);
+      const addModelBtn = document.createElement('button'); addModelBtn.className='link-btn'; addModelBtn.textContent = '+'; addModelBtn.title='Agregar modelo'; addModelBtn.onclick = ()=> addModel(cat.id);
+      const delCat = document.createElement('button'); delCat.className='link-btn'; delCat.textContent='Eliminar'; delCat.onclick = ()=>{
+        if(confirm(`Eliminar categoria "${cat.name}"?`)){ state = state.filter(c=>c.id!==cat.id); save(state); render(); }
+      };
+      const caret = document.createElement('button'); caret.className='caret'; caret.textContent = cat.collapsed ? '▸' : '▾'; caret.onclick = ()=>{ cat.collapsed = !cat.collapsed; save(state); render(); };
 
-      const importBtn = document.createElement('button'); importBtn.className='linkish'; importBtn.textContent='Importar';
-      importBtn.onclick = ()=>{ toggleImportBox(cat.id); };
-
-      const addModelBtn = document.createElement('button'); addModelBtn.className='linkish'; addModelBtn.textContent='+';
-      addModelBtn.title = 'Agregar modelo'; addModelBtn.onclick = ()=>{ addModel(cat.id); };
-
-      const delCatBtn = document.createElement('button'); delCatBtn.className='linkish'; delCatBtn.textContent='Eliminar';
-      delCatBtn.onclick = ()=>{ if(confirm('Eliminar categoria "'+cat.name+'"?')){ state = state.filter(c=>c.id!==cat.id); save(state); render(); } };
-
-      const caret = document.createElement('button'); caret.className='caret'; caret.textContent = cat.collapsed ? '▸' : '▾';
-      caret.onclick = ()=>{ cat.collapsed = !cat.collapsed; save(state); render(); };
-
-      actions.appendChild(copyBtn); actions.appendChild(importBtn); actions.appendChild(addModelBtn); actions.appendChild(delCatBtn); actions.appendChild(caret);
-
-      head.appendChild(left); head.appendChild(actions);
-      card.appendChild(head);
+      actions.appendChild(copyBtn); actions.appendChild(importBtn); actions.appendChild(addModelBtn); actions.appendChild(delCat); actions.appendChild(caret);
+      header.appendChild(actions);
+      box.appendChild(header);
 
       // body
       const body = document.createElement('div'); body.className='cat-body'; body.style.display = cat.collapsed ? 'none' : 'block';
 
       // models
-      cat.models.forEach(model => {
-        const m = document.createElement('div'); m.className='model';
-        const mhead = document.createElement('div'); mhead.style.display='flex'; mhead.style.justifyContent='space-between'; mhead.style.alignItems='center';
-        const mleft = document.createElement('div');
-        const modelName = document.createElement('div'); modelName.className='model-name'; modelName.textContent = model.name; mleft.appendChild(modelName);
-        const msmall = document.createElement('div'); msmall.className='small'; msmall.textContent = model.variants.length + ' variante(s)'; mleft.appendChild(msmall);
-        mhead.appendChild(mleft);
+      cat.models.forEach(model=>{
+        const m = document.createElement('div'); m.className = 'model';
+        const mname = document.createElement('div'); mname.className='model-name'; mname.textContent = model.name;
+        m.appendChild(mname);
 
-        const mactions = document.createElement('div'); mactions.className='row-actions';
-        const addVar = document.createElement('button'); addVar.className='linkish'; addVar.textContent='+'; addVar.title='Agregar variante'; addVar.onclick=()=>{ addVariant(cat.id, model.id); };
-        const delModel = document.createElement('button'); delModel.className='linkish'; delModel.textContent='Eliminar'; delModel.onclick=()=>{ if(confirm('Eliminar modelo "'+model.name+'"?')){ cat.models = cat.models.filter(m=>m.id!==model.id); save(state); render(); } };
-        mactions.appendChild(addVar); mactions.appendChild(delModel);
-        mhead.appendChild(mactions);
-
-        m.appendChild(mhead);
-
-        const variantsEl = document.createElement('div'); variantsEl.className='variants';
-        model.variants.forEach(variant => {
+        const variantsWrap = document.createElement('div'); variantsWrap.className='variants';
+        model.variants.forEach(variant=>{
           const v = document.createElement('div'); v.className='variant';
-          const vleft = document.createElement('div'); vleft.className='variant-left';
-          const vname = document.createElement('div'); vname.textContent = variant.name + (variant.note?(' '+variant.note):'');
-          vleft.appendChild(vname);
+          const left = document.createElement('div'); left.className='variant-left';
+          const nameDiv = document.createElement('div'); nameDiv.textContent = variant.name + (variant.sub ? ` (${variant.sub})` : '');
+          left.appendChild(nameDiv);
 
-          const vright = document.createElement('div'); vright.style.display='flex'; vright.style.alignItems='center'; vright.style.gap='8px';
-          const minus = document.createElement('button'); minus.className='linkish'; minus.textContent='-'; minus.onclick=()=>{ if(variant.qty>0){ variant.qty--; save(state); render(); } };
+          const right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
+          const minus = document.createElement('button'); minus.className='link-btn'; minus.textContent='-'; minus.onclick = ()=>{
+            if(variant.qty>0) variant.qty--; save(state); render();
+          };
           const qty = document.createElement('div'); qty.className='qty'; qty.textContent = variant.qty;
-          const plus = document.createElement('button'); plus.className='linkish'; plus.textContent='+'; plus.onclick=()=>{ variant.qty++; save(state); render(); };
-          const edit = document.createElement('button'); edit.className='linkish'; edit.textContent='Editar'; edit.onclick=()=>{ editVariant(cat.id, model.id, variant.id); };
-          const delV = document.createElement('button'); delV.className='linkish'; delV.textContent='Eliminar'; delV.onclick=()=>{ if(confirm('Eliminar variante "'+variant.name+'"?')){ model.variants = model.variants.filter(vv=>vv.id!==variant.id); save(state); render(); } };
+          const plus = document.createElement('button'); plus.className='link-btn'; plus.textContent='+'; plus.onclick = ()=>{ variant.qty++; save(state); render(); };
+          const edit = document.createElement('button'); edit.className='link-btn'; edit.textContent='Editar'; edit.onclick = ()=> editVariant(cat.id, model.id, variant.id);
+          const del = document.createElement('button'); del.className='link-btn'; del.textContent='Eliminar'; del.onclick = ()=>{
+            if(confirm(`Eliminar variante "${variant.name}"?`)){ model.variants = model.variants.filter(vv=>vv.id!==variant.id); save(state); render(); }
+          };
 
-          vright.appendChild(minus); vright.appendChild(qty); vright.appendChild(plus); vright.appendChild(edit); vright.appendChild(delV);
-          v.appendChild(vleft); v.appendChild(vright);
-          variantsEl.appendChild(v);
+          right.appendChild(minus); right.appendChild(qty); right.appendChild(plus); right.appendChild(edit); right.appendChild(del);
+
+          v.appendChild(left); v.appendChild(right);
+          variantsWrap.appendChild(v);
         });
 
-        m.appendChild(variantsEl);
+        m.appendChild(variantsWrap);
+
+        // add-variant quick controls
+        const addVarRow = document.createElement('div'); addVarRow.style.display='flex'; addVarRow.style.gap='8px'; addVarRow.style.marginTop='6px';
+        const varInput = document.createElement('input'); varInput.type='text'; varInput.placeholder='Variante (ej: Purple o Black (nota))'; varInput.style.flex='1';
+        const qtyInput = document.createElement('input'); qtyInput.type='number'; qtyInput.placeholder='Cant'; qtyInput.style.width='80px';
+        const addVarBtn = document.createElement('button'); addVarBtn.className='link-btn'; addVarBtn.textContent='+'; addVarBtn.onclick = ()=>{
+          const name = varInput.value.trim(); const q = Math.max(0, parseInt(qtyInput.value)||0);
+          if(!name){ toast('Ingresá nombre de variante'); return; }
+          model.variants.push({ id: uid(), name, qty: q, sub: '' }); save(state); render();
+        };
+        addVarRow.appendChild(varInput); addVarRow.appendChild(qtyInput); addVarRow.appendChild(addVarBtn);
+        m.appendChild(addVarRow);
+
         body.appendChild(m);
       });
 
-      // add model input
-      const addModelRow = document.createElement('div'); addModelRow.style.marginTop='8px';
-      const modelInput = document.createElement('input'); modelInput.type='text'; modelInput.placeholder='Nombre del modelo (ej: AirPods)'; modelInput.style.width='60%';
-      const modelAddBtn = document.createElement('button'); modelAddBtn.className='linkish'; modelAddBtn.textContent='+'; modelAddBtn.onclick=()=>{ const val = modelInput.value.trim(); if(!val) return toast('Ingresá nombre de modelo'); cat.models.push({id:uid(),name:val,variants:[]}); save(state); modelInput.value=''; render(); };
+      // add model input (inline)
+      const addModelRow = document.createElement('div'); addModelRow.style.marginTop='8px'; addModelRow.style.display='flex'; addModelRow.style.gap='8px';
+      const modelInput = document.createElement('input'); modelInput.type='text'; modelInput.placeholder='Nombre del modelo (ej: AirPods)'; modelInput.style.flex='1';
+      const modelAddBtn = document.createElement('button'); modelAddBtn.className='link-btn'; modelAddBtn.textContent='+'; modelAddBtn.onclick = ()=>{
+        const v = modelInput.value.trim(); if(!v){ toast('Ingresá nombre de modelo'); return; }
+        cat.models.push({ id: uid(), name: v, variants: [] }); save(state); render();
+      };
       addModelRow.appendChild(modelInput); addModelRow.appendChild(modelAddBtn);
       body.appendChild(addModelRow);
 
-      // import box (hidden by default)
-      const importBox = document.createElement('div'); importBox.className='import-box'; importBox.style.display='none';
-      importBox.id = 'import-'+cat.id;
-      const importLabel = document.createElement('div'); importLabel.className='small'; importLabel.textContent='Pegar bloque de texto para importar (usa formato: Modelo + variantes en líneas con \" xN\"): '; importBox.appendChild(importLabel);
-      const t = document.createElement('textarea'); t.placeholder = 'Ejemplo:\\nAirPods\\nPro x2\\nPro 3 x25\\nMax x7'; t.style.width='100%'; importBox.appendChild(t);
-      const importActions = document.createElement('div'); importActions.style.marginTop='6px';
-      const importDo = document.createElement('button'); importDo.className='linkish'; importDo.textContent='Importar texto'; importDo.onclick=()=>{ importFromText(cat.id, t.value); t.value=''; importBox.style.display='none'; };
-      const importCancel = document.createElement('button'); importCancel.className='linkish'; importCancel.textContent='Cancelar'; importCancel.onclick=()=>{ importBox.style.display='none'; };
-      importActions.appendChild(importDo); importActions.appendChild(importCancel); importBox.appendChild(importActions);
-      body.appendChild(importBox);
+      // import textarea for this category
+      const importLabel = document.createElement('div'); importLabel.className='small'; importLabel.style.marginTop='8px'; importLabel.textContent = 'Importar (pegá el bloque solo para esta categoría):';
+      const importArea = document.createElement('textarea'); importArea.className='import-box'; importArea.placeholder = 'Ejemplo:\\nAirPods\\nPro x2\\nPro 3 x25\\nMax x7';
+      importArea.id = `import-${cat.id}`;
 
-      card.appendChild(body);
-      catsEl.appendChild(card);
+      const importActions = document.createElement('div'); importActions.style.display='flex'; importActions.style.gap='8px'; importActions.style.marginTop='6px';
+      const doImport = document.createElement('button'); doImport.className='link-btn'; doImport.textContent='Importar texto'; doImport.onclick = ()=> {
+        importCategory(cat.id, importArea.value); importArea.value = '';
+      };
+      const cancelImport = document.createElement('button'); cancelImport.className='link-btn'; cancelImport.textContent='Cancelar'; cancelImport.onclick = ()=> { importArea.value=''; };
+
+      importActions.appendChild(doImport); importActions.appendChild(cancelImport);
+
+      body.appendChild(importLabel); body.appendChild(importArea); body.appendChild(importActions);
+
+      box.appendChild(body);
+      container.appendChild(box);
     });
+
   }
 
-  // Add / Edit helpers
-  function addCategory(name){ state.push({id:uid(),name:name||'Nueva categoria',collapsed:false,models:[]}); save(state); render(); }
-  function addModel(catId){ const cat = state.find(c=>c.id===catId); const name = prompt('Nombre del modelo:'); if(name){ cat.models.push({id:uid(),name,variants:[]}); save(state); render(); } }
-  function addVariant(catId, modelId){ const cat = state.find(c=>c.id===catId); const model = cat.models.find(m=>m.id===modelId); const name = prompt('Nombre de la variante (ej: Purple o Black (4 indios, 3 americanos)):'); if(!name) return; const qtyStr = prompt('Cantidad (numero):','1'); const qty = Math.max(0, parseInt(qtyStr)||0); model.variants.push({id:uid(),name,qty,note:null}); save(state); render(); }
-  function editVariant(catId, modelId, variantId){ const cat = state.find(c=>c.id===catId); const model = cat.models.find(m=>m.id===modelId); const variant = model.variants.find(v=>v.id===variantId); const newName = prompt('Editar nombre variante:', variant.name); if(newName!==null) variant.name = newName; const newQty = prompt('Editar cantidad:', variant.qty); if(newQty!==null) variant.qty = Math.max(0, parseInt(newQty)||0); save(state); render(); }
-
-  // Copy formatted text for a category
-  function formatCategory(cat){ let out = '';
-    // category between asterisks and underscores as requested: (*_Caja Marron_*)
-    out += '(*_' + cat.name + '_*)\n';
-    cat.models.forEach(m=>{
-      out += m.name + '\n';
-      m.variants.forEach(v=>{ if(v.qty>0){ out += v.name + ' x' + v.qty + '\n'; } });
-      out += '\n';
-    });
-    return out.trim();
-  }
-
-  async function copyCategory(catId){ const cat = state.find(c=>c.id===catId); const text = formatCategory(cat);
-    try{ await navigator.clipboard.writeText(text); toast('Copiado al portapapeles'); }catch(e){ // fallback
-      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Copiado (fallback)'); }
-  }
-
-  // Export all
-  $('#exportAll').onclick = ()=>{
-    let out = '';
-    state.forEach(cat=>{ out += formatCategory(cat) + '\n\n'; });
-    out = out.trim();
-    // show in prompt and copy
-    try{ navigator.clipboard.writeText(out); toast('Todo copiado al portapapeles'); }catch(e){ prompt('Texto exportado:', out); }
-  }
-
-  // import UI toggle
-  function toggleImportBox(catId){ const el = document.getElementById('import-'+catId); if(!el) return; el.style.display = el.style.display==='none'?'block':'none'; }
-
-  // Import parser: receives block of text and a category id
-  function importFromText(catId, text){ if(!text || !text.trim()) return; const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-    if(lines.length===0) return;
+  // helpers
+  function addModel(catId){
     const cat = state.find(c=>c.id===catId);
+    const name = prompt('Nombre del modelo:');
+    if(name){ cat.models.push({ id: uid(), name, variants: [] }); save(state); render(); }
+  }
+
+  function editVariant(catId, modelId, variantId){
+    const cat = state.find(c=>c.id===catId);
+    if(!cat) return;
+    const model = cat.models.find(m=>m.id===modelId); if(!model) return;
+    const variant = model.variants.find(v=>v.id===variantId); if(!variant) return;
+    const newName = prompt('Nuevo nombre (incluye nota si corresponde):', variant.name);
+    if(newName!==null) variant.name = newName;
+    const newQty = prompt('Cantidad:', variant.qty);
+    if(newQty!==null) variant.qty = Math.max(0, parseInt(newQty)||0);
+    save(state); render();
+  }
+
+  // import parser (per-category). So you paste only the lines for that category.
+  // Format accepted: lines starting with model name, then following lines with "Variant xN" or "Variant xN (note)"
+  // Example:
+  // AirPods
+  // Pro x2
+  // Pro 3 x25
+  // Max x7
+  function importCategory(catId, text){
+    if(!text || !text.trim()){ toast('Nada para importar'); return; }
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    if(lines.length===0){ toast('Texto invalido'); return; }
+
+    const cat = state.find(c=>c.id===catId);
+    if(!cat) return;
+
     let currentModel = null;
     lines.forEach(line=>{
-      // Detect variant by pattern: contains ' x' followed by digits (e.g. 'Pro x2' or 'Black x7 (nota)')
-      const variantMatch = line.match(/^(.*)\s+x(\d+)(\s*\(.*\))?$/i);
-      if(variantMatch){
-        const vname = variantMatch[1].trim();
-        const vqty = parseInt(variantMatch[2]);
-        const vnote = variantMatch[3] ? variantMatch[3].trim() : null;
-        if(!currentModel){ // if no model yet, create a "sin modelo"
-          currentModel = {id:uid(),name:'Sin modelo',variants:[]}; cat.models.push(currentModel);
+      // detect variant like "Pro x2" or "Black x3 (nota)"
+      const m = line.match(/^(.*)\\s+x(\\d+)(\\s*\\(.*\\))?$/i);
+      if(m){
+        const vname = m[1].trim();
+        const vqty = parseInt(m[2]);
+        const vnote = m[3] ? m[3].trim().slice(1,-1) : ''; // remove parentheses
+        if(!currentModel){
+          // if variant without model -> create 'Sin modelo'
+          currentModel = { id: uid(), name: 'Sin modelo', variants: [] };
+          cat.models.push(currentModel);
         }
-        currentModel.variants.push({id:uid(),name:vname,qty:vqty,note:vnote});
+        currentModel.variants.push({ id: uid(), name: vname, qty: vqty, sub: vnote||'' });
       } else {
         // treat as model line
-        currentModel = {id:uid(),name:line,variants:[]};
+        currentModel = { id: uid(), name: line, variants: [] };
         cat.models.push(currentModel);
       }
     });
-    save(state); render(); toast('Importado'); }
 
-  // Add category button
-  $('#addCatBtn').onclick = ()=>{ const name = prompt('Nombre de la categoria:'); if(name) addCategory(name); }
+    save(state); render(); toast('Importado');
+  }
 
-  // Clear / load example
-  $('#clearAll').onclick = ()=>{ if(confirm('Eliminar todos los datos guardados?')){ state = []; save(state); render(); } }
-  $('#loadExample').onclick = ()=>{ state = sampleData; save(state); render(); }
+  function copyCategory(catId){
+    const cat = state.find(c=>c.id===catId);
+    if(!cat) return;
+    let out = `(*_${cat.name}_*)\\n`;
+    cat.models.forEach(m=>{
+      out += m.name + '\\n';
+      m.variants.forEach(v=>{
+        out += `${v.name} x${v.qty}`;
+        if(v.sub && v.sub.trim()) out += ` (${v.sub})`;
+        out += '\\n';
+      });
+      out += '\\n';
+    });
+    navigator.clipboard.writeText(out.trim()).then(()=>toast('Copiado al portapapeles')).catch(()=>{ prompt('Texto:', out.trim()); });
+  }
+
+  // Export all (copy)
+  document.getElementById('exportAll').addEventListener('click', ()=>{
+    let out = '';
+    state.forEach(cat=>{
+      out += `(*_${cat.name}_*)\\n`;
+      cat.models.forEach(m=>{
+        out += m.name + '\\n';
+        m.variants.forEach(v=>{
+          out += `${v.name} x${v.qty}`;
+          if(v.sub && v.sub.trim()) out += ` (${v.sub})`;
+          out += '\\n';
+        });
+        out += '\\n';
+      });
+      out += '\\n';
+    });
+    out = out.trim();
+    navigator.clipboard.writeText(out).then(()=>toast('Todo copiado')).catch(()=> prompt('Texto exportado:', out));
+  });
+
+  // add category
+  document.getElementById('addCat').addEventListener('click', ()=>{
+    const n = prompt('Nombre de la categoria:');
+    if(n){ state.push({ id: uid(), name: n, collapsed:false, models: [] }); save(state); render(); }
+  });
+
+  document.getElementById('loadExample').addEventListener('click', ()=>{ if(confirm('Sobrescribir datos actuales con ejemplo?')){ state = sample.slice(); save(state); render(); } });
+  document.getElementById('clearAll').addEventListener('click', ()=>{ if(confirm('Eliminar todos los datos guardados?')){ state = []; save(state); render(); } });
+
+  // show/hide import area helper (scroll to it)
+  function toggleImport(catId){
+    const el = document.getElementById(`import-${catId}`);
+    if(!el) return;
+    el.focus();
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  // persist on unload
+  window.addEventListener('beforeunload', ()=> save(state) );
 
   // initial render
   render();
-  </script>
+});
+</script>
 </body>
 </html>
