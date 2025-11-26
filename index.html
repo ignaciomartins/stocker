@@ -1,319 +1,326 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>Gestor de Stock</title>
-  <!-- Evita el zoom cuando el usuario escribe en inputs en móviles -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <style>
-    :root{--bg:#f7f8fb;--card:#fff;--muted:#666;--accent:#2b6cb0}
-    *{box-sizing:border-box}
-    body{font-family:Inter, Arial, sans-serif;background:var(--bg);margin:0;padding:14px;color:#111}
-    h2{margin:0 0 12px 0;font-size:18px}
-
-    .cat-box{background:var(--card);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-    .cat-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .cat-title{font-weight:700}
-    .cat-sub{font-size:13px;color:var(--muted)}
-
-    .cat-actions{display:flex;gap:8px;align-items:center}
-    .link-btn{background:transparent;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:6px;border-radius:6px}
-    .icon-btn{background:#111;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer}
-
-    .cat-body{margin-top:10px}
-    .model{padding:6px 6px 6px 8px;border-radius:8px;margin-bottom:8px}
-    .model-name{font-weight:600;padding-left:8px} /* requested padding-left */
-    .variants{padding-left:8px;margin-top:6px}
-    .variant{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px}
-    .variant-left{display:flex;flex-direction:column;gap:6px}
-    .qty{min-width:40px;text-align:center;padding:4px 8px;border-radius:6px;background:#eef2ff}
-
-    input[type="text"], textarea{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e6e6e6;width:100%}
-    textarea.import-box{min-height:90px;margin-top:8px}
-
-    .small{font-size:13px;color:var(--muted)}
-    .caret{font-size:18px;padding:6px 8px;border-radius:6px;background:transparent;border:none;cursor:pointer}
-
-    @media (max-width:600px){
-      body{padding:10px}
-      .variant{flex-direction:column;align-items:flex-start;gap:8px}
-      .variant .qty{align-self:flex-end}
-    }
-
-    /* toast */
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .18s}
-    .toast.show{opacity:1;pointer-events:auto}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Gestor de Stock — Dinámico</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#fff; --muted:#666; --accent:#2b6cb0;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,Arial,sans-serif;color:#111}
+  .app{max-width:980px;margin:0 auto;padding:12px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+  h1{font-size:18px;margin:0}
+  .controls{display:flex;gap:8px}
+  button.btn{border:0;padding:8px 10px;border-radius:10px;background:#222;color:#fff;font-weight:600}
+  button.ghost{background:transparent;border:1px solid #ddd;padding:8px 10px;border-radius:10px}
+  /* Category card */
+  .cat{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .cat-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .cat-left{display:flex;flex-direction:column}
+  .cat-title{font-weight:700}
+  .cat-meta{font-size:13px;color:var(--muted)}
+  .cat-actions{display:flex;gap:8px;align-items:center}
+  .icon-btn{background:transparent;border:none;color:var(--accent);font-weight:700;cursor:pointer;padding:6px;border-radius:8px}
+  .icon-btn.danger{color:#c23}
+  /* body */
+  .cat-body{margin-top:10px}
+  .model{padding:6px 6px 6px 8px;border-radius:8px;margin-bottom:8px;background:#fbfcff}
+  .model-name{font-weight:600}
+  .models-list{padding-left:8px}
+  .model-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .variants{margin-top:6px;padding-left:8px}
+  .variant{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px;border-radius:8px}
+  .variant-left{display:flex;flex-direction:column;gap:4px}
+  .variant-name{font-weight:500}
+  .variant-note{font-size:13px;color:var(--muted)}
+  .qty{min-width:40px;text-align:center;padding:6px;border-radius:8px;background:#eef2ff}
+  input[type="text"], input[type="number"]{font-size:16px;padding:8px;border-radius:8px;border:1px solid #e6e6e6}
+  input.small{font-size:15px;padding:6px}
+  .add-row{display:flex;gap:8px;margin-top:8px}
+  .small{font-size:13px;color:var(--muted)}
+  /* responsive */
+  @media (max-width:600px){
+    .model-row{flex-direction:column;align-items:flex-start}
+    .variant{flex-direction:column;align-items:flex-start}
+    .cat{padding:10px}
+    header{gap:6px}
+  }
+  /* toast */
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .18s}
+  .toast.show{opacity:1;pointer-events:auto}
+</style>
 </head>
 <body>
-  <h2>Gestor de Stock — Móvil</h2>
+  <div class="app">
+    <header>
+      <h1>Gestor de Stock</h1>
+      <div class="controls">
+        <button class="btn" id="addCat">+ Categoria</button>
+        <button class="ghost" id="exportAll">Exportar todo</button>
+      </div>
+    </header>
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-    <button id="addCat" class="icon-btn">+ Categoria</button>
-    <button id="exportAll" class="link-btn">Exportar todo</button>
-    <button id="loadExample" class="link-btn">Cargar ejemplo</button>
-    <button id="clearAll" class="link-btn">Limpiar todo</button>
+    <main id="root"></main>
+
+    <div id="toast" class="toast"></div>
   </div>
 
-  <main id="container"></main>
-
-  <div id="toast" class="toast"></div>
-
 <script>
-document.addEventListener('DOMContentLoaded', ()=>{
+/* ------------------------
+  Data + persistencia
+   ------------------------ */
+const STORAGE_KEY = 'stock_app_v2';
+const uid = ()=>Math.random().toString(36).slice(2,9);
 
-  const STORAGE_KEY = 'stock_page_v1';
-  const $ = s => document.querySelector(s);
-  const uid = () => Math.random().toString(36).slice(2,9);
-
-  // sample
-  const sample = [
-    { id: uid(), name: 'Caja Marron', collapsed: false, models: [
-      { id: uid(), name: '14 Pro Max 512gb', variants: [ { id: uid(), name: 'Purple', qty: 1 } ] },
-      { id: uid(), name: '14 Pro Max 1TB', variants: [ { id: uid(), name: 'Purple', qty: 2 } ] },
-      { id: uid(), name: 'AirPods', variants: [ { id: uid(), name: 'Pro', qty: 2 }, { id: uid(), name: 'Pro 3', qty: 25 }, { id: uid(), name: 'Max', qty: 7 } ] }
+let state = loadState();
+if(!state || state.length === 0){
+  state = [
+    { id:uid(), name:'Caja Marron', collapsed:false, models:[
+      { id:uid(), name:'14 Pro Max 512gb', variants:[ { id:uid(), name:'Purple', qty:1, note:'' } ] },
+      { id:uid(), name:'14 Pro Max 1TB', variants:[ { id:uid(), name:'Purple', qty:2, note:'' } ] }
     ]},
-    { id: uid(), name: 'Asis', collapsed: false, models: [
-      { id: uid(), name: '16 Pro 128gb', variants: [ { id: uid(), name: 'White', qty: 2 }, { id: uid(), name: 'Black', qty: 3 } ] }
-    ]},
-    { id: uid(), name: 'Tester', collapsed: false, models: [
-      { id: uid(), name: '13 128gb', variants: [ { id: uid(), name: 'Midnight', qty: 2 }, { id: uid(), name: 'Blue', qty: 3 } ] }
+    { id:uid(), name:'Asis', collapsed:false, models:[
+      { id:uid(), name:'16 Pro 128gb', variants:[ { id:uid(), name:'White', qty:2, note:'' }, { id:uid(), name:'Black', qty:3, note:'' } ] }
     ]}
   ];
+  saveState();
+}
 
-  function save(state){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function load(){ try{ const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null }catch(e){return null} }
+function loadState(){ try{ const r = localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):[] }catch(e){return []} }
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
-  let state = load() || sample.slice();
+/* --------------- UI helpers --------------- */
+const root = document.getElementById('root');
+const toastEl = document.getElementById('toast');
+function toast(msg, t=1400){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), t); }
 
-  const container = document.getElementById('container');
-  const toastEl = document.getElementById('toast');
+/* --------------- Render --------------- */
+function render(){
+  root.innerHTML = '';
+  state.forEach(cat => {
+    const catCard = document.createElement('div'); catCard.className = 'cat';
 
-  function toast(msg, t=1400){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), t); }
+    // header
+    const head = document.createElement('div'); head.className = 'cat-head';
+    const left = document.createElement('div'); left.className = 'cat-left';
+    const title = document.createElement('div'); title.className='cat-title'; title.textContent = '*_' + cat.name + '_*';
+    const meta = document.createElement('div'); meta.className='cat-meta'; meta.textContent = `${cat.models.length} modelo(s)`;
+    left.appendChild(title); left.appendChild(meta);
 
-  function render(){
-    container.innerHTML = '';
-    state.forEach(cat=>{
-      const box = document.createElement('div'); box.className = 'cat-box';
-      // header
-      const header = document.createElement('div'); header.className = 'cat-header';
-      const left = document.createElement('div');
-      const title = document.createElement('div'); title.className = 'cat-title'; title.textContent = `(*_${cat.name}_*)`;
-      const sub = document.createElement('div'); sub.className = 'cat-sub'; sub.textContent = `${cat.models.length} modelo(s)`;
-      left.appendChild(title); left.appendChild(sub);
-      header.appendChild(left);
+    const actions = document.createElement('div'); actions.className='cat-actions';
+    const copyBtn = document.createElement('button'); copyBtn.className='icon-btn'; copyBtn.textContent='Copiar'; copyBtn.title='Copiar solo esta categoría';
+    copyBtn.onclick = ()=>copyCategory(cat.id);
 
-      const actions = document.createElement('div'); actions.className = 'cat-actions';
-      const copyBtn = document.createElement('button'); copyBtn.className='link-btn'; copyBtn.textContent = 'Copiar'; copyBtn.onclick = ()=> copyCategory(cat.id);
-      const importBtn = document.createElement('button'); importBtn.className='link-btn'; importBtn.textContent = 'Importar'; importBtn.onclick = ()=> toggleImport(cat.id);
-      const addModelBtn = document.createElement('button'); addModelBtn.className='link-btn'; addModelBtn.textContent = '+'; addModelBtn.title='Agregar modelo'; addModelBtn.onclick = ()=> addModel(cat.id);
-      const delCat = document.createElement('button'); delCat.className='link-btn'; delCat.textContent='Eliminar'; delCat.onclick = ()=>{
-        if(confirm(`Eliminar categoria "${cat.name}"?`)){ state = state.filter(c=>c.id!==cat.id); save(state); render(); }
-      };
-      const caret = document.createElement('button'); caret.className='caret'; caret.textContent = cat.collapsed ? '▸' : '▾'; caret.onclick = ()=>{ cat.collapsed = !cat.collapsed; save(state); render(); };
+    const addModelBtn = document.createElement('button'); addModelBtn.className='icon-btn'; addModelBtn.textContent='+'; addModelBtn.title='Agregar modelo';
+    addModelBtn.onclick = ()=>{ promptAddModel(cat.id); };
 
-      actions.appendChild(copyBtn); actions.appendChild(importBtn); actions.appendChild(addModelBtn); actions.appendChild(delCat); actions.appendChild(caret);
-      header.appendChild(actions);
-      box.appendChild(header);
+    const delCatBtn = document.createElement('button'); delCatBtn.className='icon-btn danger'; delCatBtn.textContent='Eliminar';
+    delCatBtn.onclick = ()=>{ if(confirm(`Eliminar categoría "${cat.name}"?`)){ state = state.filter(c=>c.id!==cat.id); saveState(); render(); } };
 
-      // body
-      const body = document.createElement('div'); body.className='cat-body'; body.style.display = cat.collapsed ? 'none' : 'block';
+    const caret = document.createElement('button'); caret.className='icon-btn'; caret.textContent = cat.collapsed ? '▸' : '▾';
+    caret.onclick = ()=>{ cat.collapsed = !cat.collapsed; saveState(); render(); };
 
-      // models
-      cat.models.forEach(model=>{
-        const m = document.createElement('div'); m.className = 'model';
-        const mname = document.createElement('div'); mname.className='model-name'; mname.textContent = model.name;
-        m.appendChild(mname);
+    actions.appendChild(copyBtn);
+    actions.appendChild(addModelBtn);
+    actions.appendChild(delCatBtn);
+    actions.appendChild(caret);
 
-        const variantsWrap = document.createElement('div'); variantsWrap.className='variants';
-        model.variants.forEach(variant=>{
-          const v = document.createElement('div'); v.className='variant';
-          const left = document.createElement('div'); left.className='variant-left';
-          const nameDiv = document.createElement('div'); nameDiv.textContent = variant.name + (variant.sub ? ` (${variant.sub})` : '');
-          left.appendChild(nameDiv);
+    head.appendChild(left); head.appendChild(actions);
+    catCard.appendChild(head);
 
-          const right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
-          const minus = document.createElement('button'); minus.className='link-btn'; minus.textContent='-'; minus.onclick = ()=>{
-            if(variant.qty>0) variant.qty--; save(state); render();
-          };
-          const qty = document.createElement('div'); qty.className='qty'; qty.textContent = variant.qty;
-          const plus = document.createElement('button'); plus.className='link-btn'; plus.textContent='+'; plus.onclick = ()=>{ variant.qty++; save(state); render(); };
-          const edit = document.createElement('button'); edit.className='link-btn'; edit.textContent='Editar'; edit.onclick = ()=> editVariant(cat.id, model.id, variant.id);
-          const del = document.createElement('button'); del.className='link-btn'; del.textContent='Eliminar'; del.onclick = ()=>{
-            if(confirm(`Eliminar variante "${variant.name}"?`)){ model.variants = model.variants.filter(vv=>vv.id!==variant.id); save(state); render(); }
-          };
+    // body (accordion)
+    const body = document.createElement('div'); body.className='cat-body';
+    body.style.display = cat.collapsed ? 'none' : 'block';
 
-          right.appendChild(minus); right.appendChild(qty); right.appendChild(plus); right.appendChild(edit); right.appendChild(del);
+    // models
+    const modelsList = document.createElement('div'); modelsList.className='models-list';
+    cat.models.forEach(model => {
+      const modelBox = document.createElement('div'); modelBox.className='model';
+      const mRow = document.createElement('div'); mRow.className='model-row';
 
-          v.appendChild(left); v.appendChild(right);
-          variantsWrap.appendChild(v);
-        });
+      const mLeft = document.createElement('div');
+      const mName = document.createElement('div'); mName.className='model-name'; mName.textContent = model.name;
+      const mSmall = document.createElement('div'); mSmall.className='small'; mSmall.textContent = `${model.variants.length} variante(s)`;
+      mLeft.appendChild(mName); mLeft.appendChild(mSmall);
 
-        m.appendChild(variantsWrap);
+      const mActions = document.createElement('div');
+      const addVarBtn = document.createElement('button'); addVarBtn.className='icon-btn'; addVarBtn.textContent='+'; addVarBtn.title='Agregar variante';
+      addVarBtn.onclick = ()=> promptAddVariant(cat.id, model.id);
 
-        // add-variant quick controls
-        const addVarRow = document.createElement('div'); addVarRow.style.display='flex'; addVarRow.style.gap='8px'; addVarRow.style.marginTop='6px';
-        const varInput = document.createElement('input'); varInput.type='text'; varInput.placeholder='Variante (ej: Purple o Black (nota))'; varInput.style.flex='1';
-        const qtyInput = document.createElement('input'); qtyInput.type='number'; qtyInput.placeholder='Cant'; qtyInput.style.width='80px';
-        const addVarBtn = document.createElement('button'); addVarBtn.className='link-btn'; addVarBtn.textContent='+'; addVarBtn.onclick = ()=>{
-          const name = varInput.value.trim(); const q = Math.max(0, parseInt(qtyInput.value)||0);
-          if(!name){ toast('Ingresá nombre de variante'); return; }
-          model.variants.push({ id: uid(), name, qty: q, sub: '' }); save(state); render();
-        };
-        addVarRow.appendChild(varInput); addVarRow.appendChild(qtyInput); addVarRow.appendChild(addVarBtn);
-        m.appendChild(addVarRow);
+      const delModelBtn = document.createElement('button'); delModelBtn.className='icon-btn danger'; delModelBtn.textContent='Eliminar';
+      delModelBtn.onclick = ()=>{ if(confirm(`Eliminar modelo "${model.name}"?`)){ cat.models = cat.models.filter(m=>m.id!==model.id); saveState(); render(); } };
 
-        body.appendChild(m);
+      mActions.appendChild(addVarBtn); mActions.appendChild(delModelBtn);
+
+      mRow.appendChild(mLeft); mRow.appendChild(mActions);
+      modelBox.appendChild(mRow);
+
+      // variants
+      const variantsEl = document.createElement('div'); variantsEl.className='variants';
+      model.variants.forEach(variant => {
+        const v = document.createElement('div'); v.className='variant';
+
+        const vLeft = document.createElement('div'); vLeft.className='variant-left';
+        const vName = document.createElement('div'); vName.className='variant-name'; vName.textContent = variant.name;
+        const vNote = document.createElement('div'); vNote.className='variant-note'; vNote.textContent = variant.note || '';
+        if(!(variant.note || '').trim()) vNote.style.display = 'none';
+        vLeft.appendChild(vName); vLeft.appendChild(vNote);
+
+        const vRight = document.createElement('div'); vRight.style.display='flex'; vRight.style.alignItems='center'; vRight.style.gap='8px';
+
+        const minus = document.createElement('button'); minus.className='icon-btn'; minus.textContent='-';
+        minus.onclick = ()=>{ if(variant.qty>0) variant.qty--; saveState(); render(); };
+
+        const qty = document.createElement('div'); qty.className='qty'; qty.textContent = variant.qty;
+
+        const plus = document.createElement('button'); plus.className='icon-btn'; plus.textContent='+';
+        plus.onclick = ()=>{ variant.qty++; saveState(); render(); };
+
+        const edit = document.createElement('button'); edit.className='icon-btn'; edit.textContent='Editar';
+        edit.onclick = ()=> editVariant(cat.id, model.id, variant.id);
+
+        const del = document.createElement('button'); del.className='icon-btn danger'; del.textContent='Eliminar';
+        del.onclick = ()=>{ if(confirm(`Eliminar variante "${variant.name}"?`)){ model.variants = model.variants.filter(x=>x.id!==variant.id); saveState(); render(); } };
+
+        vRight.appendChild(minus); vRight.appendChild(qty); vRight.appendChild(plus); vRight.appendChild(edit); vRight.appendChild(del);
+
+        v.appendChild(vLeft); v.appendChild(vRight);
+        variantsEl.appendChild(v);
       });
 
-      // add model input (inline)
-      const addModelRow = document.createElement('div'); addModelRow.style.marginTop='8px'; addModelRow.style.display='flex'; addModelRow.style.gap='8px';
-      const modelInput = document.createElement('input'); modelInput.type='text'; modelInput.placeholder='Nombre del modelo (ej: AirPods)'; modelInput.style.flex='1';
-      const modelAddBtn = document.createElement('button'); modelAddBtn.className='link-btn'; modelAddBtn.textContent='+'; modelAddBtn.onclick = ()=>{
-        const v = modelInput.value.trim(); if(!v){ toast('Ingresá nombre de modelo'); return; }
-        cat.models.push({ id: uid(), name: v, variants: [] }); save(state); render();
-      };
-      addModelRow.appendChild(modelInput); addModelRow.appendChild(modelAddBtn);
-      body.appendChild(addModelRow);
-
-      // import textarea for this category
-      const importLabel = document.createElement('div'); importLabel.className='small'; importLabel.style.marginTop='8px'; importLabel.textContent = 'Importar (pegá el bloque solo para esta categoría):';
-      const importArea = document.createElement('textarea'); importArea.className='import-box'; importArea.placeholder = 'Ejemplo:\\nAirPods\\nPro x2\\nPro 3 x25\\nMax x7';
-      importArea.id = `import-${cat.id}`;
-
-      const importActions = document.createElement('div'); importActions.style.display='flex'; importActions.style.gap='8px'; importActions.style.marginTop='6px';
-      const doImport = document.createElement('button'); doImport.className='link-btn'; doImport.textContent='Importar texto'; doImport.onclick = ()=> {
-        importCategory(cat.id, importArea.value); importArea.value = '';
-      };
-      const cancelImport = document.createElement('button'); cancelImport.className='link-btn'; cancelImport.textContent='Cancelar'; cancelImport.onclick = ()=> { importArea.value=''; };
-
-      importActions.appendChild(doImport); importActions.appendChild(cancelImport);
-
-      body.appendChild(importLabel); body.appendChild(importArea); body.appendChild(importActions);
-
-      box.appendChild(body);
-      container.appendChild(box);
+      modelBox.appendChild(variantsEl);
+      modelsList.appendChild(modelBox);
     });
 
-  }
+    // add model inline row
+    const addModelRow = document.createElement('div'); addModelRow.className='add-row';
+    const modelInput = document.createElement('input'); modelInput.type='text'; modelInput.placeholder='Nuevo modelo (ej: AirPods)'; modelInput.style.flex='1'; modelInput.style.fontSize='16px';
+    const modelAdd = document.createElement('button'); modelAdd.className='icon-btn'; modelAdd.textContent='+';
+    modelAdd.onclick = ()=>{
+      const val = modelInput.value.trim();
+      if(!val) return toast('Ingresá nombre de modelo');
+      cat.models.push({ id:uid(), name:val, variants:[] });
+      modelInput.value=''; saveState(); render();
+    };
+    addModelRow.appendChild(modelInput); addModelRow.appendChild(modelAdd);
 
-  // helpers
-  function addModel(catId){
-    const cat = state.find(c=>c.id===catId);
-    const name = prompt('Nombre del modelo:');
-    if(name){ cat.models.push({ id: uid(), name, variants: [] }); save(state); render(); }
-  }
+    body.appendChild(modelsList);
+    body.appendChild(addModelRow);
 
-  function editVariant(catId, modelId, variantId){
-    const cat = state.find(c=>c.id===catId);
-    if(!cat) return;
-    const model = cat.models.find(m=>m.id===modelId); if(!model) return;
-    const variant = model.variants.find(v=>v.id===variantId); if(!variant) return;
-    const newName = prompt('Nuevo nombre (incluye nota si corresponde):', variant.name);
-    if(newName!==null) variant.name = newName;
-    const newQty = prompt('Cantidad:', variant.qty);
-    if(newQty!==null) variant.qty = Math.max(0, parseInt(newQty)||0);
-    save(state); render();
-  }
+    catCard.appendChild(body);
+    root.appendChild(catCard);
+  });
 
-  // import parser (per-category). So you paste only the lines for that category.
-  // Format accepted: lines starting with model name, then following lines with "Variant xN" or "Variant xN (note)"
-  // Example:
-  // AirPods
-  // Pro x2
-  // Pro 3 x25
-  // Max x7
-  function importCategory(catId, text){
-    if(!text || !text.trim()){ toast('Nada para importar'); return; }
-    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    if(lines.length===0){ toast('Texto invalido'); return; }
+  // tiny footer space
+  const spacer = document.createElement('div'); spacer.style.height='60px';
+  root.appendChild(spacer);
+}
 
-    const cat = state.find(c=>c.id===catId);
-    if(!cat) return;
+/* --------------- Actions --------------- */
+function promptAddModel(catId){
+  const cat = state.find(c=>c.id===catId);
+  const name = prompt('Nombre del modelo:');
+  if(name && name.trim()){ cat.models.push({ id:uid(), name:name.trim(), variants:[] }); saveState(); render(); }
+}
 
-    let currentModel = null;
-    lines.forEach(line=>{
-      // detect variant like "Pro x2" or "Black x3 (nota)"
-      const m = line.match(/^(.*)\\s+x(\\d+)(\\s*\\(.*\\))?$/i);
-      if(m){
-        const vname = m[1].trim();
-        const vqty = parseInt(m[2]);
-        const vnote = m[3] ? m[3].trim().slice(1,-1) : ''; // remove parentheses
-        if(!currentModel){
-          // if variant without model -> create 'Sin modelo'
-          currentModel = { id: uid(), name: 'Sin modelo', variants: [] };
-          cat.models.push(currentModel);
-        }
-        currentModel.variants.push({ id: uid(), name: vname, qty: vqty, sub: vnote||'' });
-      } else {
-        // treat as model line
-        currentModel = { id: uid(), name: line, variants: [] };
-        cat.models.push(currentModel);
+function promptAddVariant(catId, modelId){
+  const cat = state.find(c=>c.id===catId);
+  const model = cat.models.find(m=>m.id===modelId);
+  const vname = prompt('Nombre variante (ej: Purple or Max):');
+  if(!vname || !vname.trim()) return;
+  const qtyStr = prompt('Cantidad (numero):','1');
+  const qty = Math.max(0, parseInt(qtyStr)||0);
+  const note = prompt('Nota / sub-variantes (opcional):','');
+  model.variants.push({ id:uid(), name:vname.trim(), qty, note: note?note.trim():'' });
+  saveState(); render();
+}
+
+function editVariant(catId, modelId, variantId){
+  const cat = state.find(c=>c.id===catId);
+  const model = cat.models.find(m=>m.id===modelId);
+  const variant = model.variants.find(v=>v.id===variantId);
+  const newName = prompt('Editar nombre variante:', variant.name);
+  if(newName!==null) variant.name = newName.trim();
+  const newQty = prompt('Editar cantidad:', variant.qty);
+  if(newQty!==null) variant.qty = Math.max(0, parseInt(newQty)||0);
+  const newNote = prompt('Editar nota (opcional):', variant.note||'');
+  if(newNote!==null) variant.note = newNote.trim();
+  saveState(); render();
+}
+
+/* Copy single category formatted like you requested:
+   Category header: "*_Categoria_*"
+   Then:
+   Modelo
+   Variante xN (nota)   (only if qty>0)
+   <blank line between models>
+*/
+async function copyCategory(catId){
+  const cat = state.find(c=>c.id===catId);
+  if(!cat) return;
+  let out = `*_` + cat.name + `_*\n\n`;
+  cat.models.forEach(m=>{
+    out += m.name + '\n';
+    m.variants.forEach(v=>{
+      if(v.qty > 0){
+        out += v.name + ' x' + v.qty;
+        if(v.note && v.note.trim()) out += ' (' + v.note + ')';
+        out += '\n';
       }
     });
-
-    save(state); render(); toast('Importado');
+    out += '\n';
+  });
+  out = out.trim();
+  try{
+    await navigator.clipboard.writeText(out);
+    toast('Copiado al portapapeles');
+  }catch(e){
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = out;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    toast('Copiado (fallback)');
   }
+}
 
-  function copyCategory(catId){
-    const cat = state.find(c=>c.id===catId);
-    if(!cat) return;
-    let out = `(*_${cat.name}_*)\\n`;
+/* Export all as single text + copy */
+async function exportAll(){
+  let out = '';
+  state.forEach(cat=>{
+    out += '*_' + cat.name + '_*' + '\n\n';
     cat.models.forEach(m=>{
-      out += m.name + '\\n';
+      out += m.name + '\n';
       m.variants.forEach(v=>{
-        out += `${v.name} x${v.qty}`;
-        if(v.sub && v.sub.trim()) out += ` (${v.sub})`;
-        out += '\\n';
+        if(v.qty>0){
+          out += v.name + ' x' + v.qty;
+          if(v.note && v.note.trim()) out += ' ('+v.note+')';
+          out += '\n';
+        }
       });
-      out += '\\n';
+      out += '\n';
     });
-    navigator.clipboard.writeText(out.trim()).then(()=>toast('Copiado al portapapeles')).catch(()=>{ prompt('Texto:', out.trim()); });
-  }
-
-  // Export all (copy)
-  document.getElementById('exportAll').addEventListener('click', ()=>{
-    let out = '';
-    state.forEach(cat=>{
-      out += `(*_${cat.name}_*)\\n`;
-      cat.models.forEach(m=>{
-        out += m.name + '\\n';
-        m.variants.forEach(v=>{
-          out += `${v.name} x${v.qty}`;
-          if(v.sub && v.sub.trim()) out += ` (${v.sub})`;
-          out += '\\n';
-        });
-        out += '\\n';
-      });
-      out += '\\n';
-    });
-    out = out.trim();
-    navigator.clipboard.writeText(out).then(()=>toast('Todo copiado')).catch(()=> prompt('Texto exportado:', out));
+    out += '\n';
   });
+  out = out.trim();
+  try{ await navigator.clipboard.writeText(out); toast('Todo copiado'); }catch(e){ prompt('Texto exportado:', out); }
+}
 
-  // add category
-  document.getElementById('addCat').addEventListener('click', ()=>{
-    const n = prompt('Nombre de la categoria:');
-    if(n){ state.push({ id: uid(), name: n, collapsed:false, models: [] }); save(state); render(); }
-  });
+/* --------------- Top controls wiring --------------- */
+document.getElementById('addCat').onclick = ()=>{
+  const name = prompt('Nombre de la categoría:');
+  if(!name || !name.trim()) return;
+  state.push({ id:uid(), name: name.trim(), collapsed:false, models:[] });
+  saveState(); render();
+};
+document.getElementById('exportAll').onclick = exportAll;
 
-  document.getElementById('loadExample').addEventListener('click', ()=>{ if(confirm('Sobrescribir datos actuales con ejemplo?')){ state = sample.slice(); save(state); render(); } });
-  document.getElementById('clearAll').addEventListener('click', ()=>{ if(confirm('Eliminar todos los datos guardados?')){ state = []; save(state); render(); } });
-
-  // show/hide import area helper (scroll to it)
-  function toggleImport(catId){
-    const el = document.getElementById(`import-${catId}`);
-    if(!el) return;
-    el.focus();
-    el.scrollIntoView({behavior:'smooth',block:'center'});
-  }
-
-  // persist on unload
-  window.addEventListener('beforeunload', ()=> save(state) );
-
-  // initial render
-  render();
-});
+/* initial render */
+render();
 </script>
 </body>
 </html>
